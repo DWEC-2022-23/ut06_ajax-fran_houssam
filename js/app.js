@@ -1,4 +1,7 @@
 const url = "http://localhost:3000/invitados";
+
+let nextId = 1;
+
 document.addEventListener('DOMContentLoaded', () => {
   const form = document.getElementById('registrar');
   const input = form.querySelector('input');
@@ -36,15 +39,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
+  
+
   function createLI(text) {
+    const id = nextId++;
+  
     function createElement(elementName, property, value) {
       const element = document.createElement(elementName);  
-      element[property] = value; 
+      element[property] = value;
       return element;
     }
     
     function appendToLI(elementName, property, value) {
-      const element = createElement(elementName, property, value);     
+      const element = createElement(elementName, property, value);  
       li.appendChild(element); 
       return element;
     }
@@ -55,17 +62,17 @@ document.addEventListener('DOMContentLoaded', () => {
     .appendChild(createElement('input', 'type','checkbox'));
     appendToLI('button', 'textContent', 'edit');
     appendToLI('button', 'textContent', 'remove');
+    li.setAttribute('data-id', id);
     return li;
   }
   
   form.addEventListener('submit', (e) => {
     e.preventDefault();
     const text = input.value;
+    añadirElemento(text);
     input.value = '';
     const li = createLI(text);
     ul.appendChild(li);
-    añadirElemento(text);
-   
   });
 
   ul.addEventListener('change', (e) => {
@@ -85,7 +92,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const button = e.target;
       const li = button.parentNode;
       const ul = li.parentNode;
-      const action = button.textContent;
+      const action = button.textContent
       const nameActions = {
         remove: () => {
           ul.removeChild(li);
@@ -99,15 +106,20 @@ document.addEventListener('DOMContentLoaded', () => {
           li.insertBefore(input, span);
           li.removeChild(span);
           button.textContent = 'save'; 
-          buscar(e); 
+          
         },
         save: () => {
-          const input = li.firstElementChild;
-          const span = document.createElement('span');
-          span.textContent = input.value;
-          li.insertBefore(span, input);
-          li.removeChild(input);
-          button.textContent = 'edit';        
+            console.log(li.getAttribute("id")) 
+            const input = li.firstElementChild;
+            const span = document.createElement('span');
+            span.textContent = input.value;
+            li.insertBefore(span, input);
+            li.removeChild(input);
+            button.textContent = 'edit'; 
+              
+            actualizar(li.getAttribute("data-id"), li.querySelector('input[type="checkbox"]').checked, li.querySelector("span").textContent);  
+          
+           
         }
       };
       
@@ -132,9 +144,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 //reject[fallo]
                 let datos = JSON.parse(this.responseText);
                 for(let objeto of datos){
+
+                  if(objeto.confirmado == true){
+
+                    const li = createLI(objeto.nombre);
+                    li.querySelector("input").checked = true;
+                    ul.appendChild(li);
+
+                  }else{
+
                     const li = createLI(objeto.nombre);
                     ul.appendChild(li);
-                    //console.log(objeto.confirmado); 
+
+                  }
+
                 }
 
             }else{
@@ -150,19 +173,47 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
 })  
+
 function añadirElemento(text){
   return new Promise(function añadir(resolve,reject){
     let xhc=new XMLHttpRequest();
     xhc.open('POST',url,true);
 
-  xhc.setRequestHeader("Content-Type", "application/json");
-  let nuevoInvitado = JSON.stringify({"id":0, "nombre": text, "confirmado": false});
-  xhc.send(nuevoInvitado);
+    xhc.setRequestHeader("Content-Type", "application/json");
+    let nuevoInvitado = JSON.stringify({"id":0, "nombre": text, "confirmado": false});
+    xhc.send(nuevoInvitado);
+  })
+}
+
+function establecerId(text) {
+  
+  let promesa =  new Promise(function buscar(){
+    let xhc=new XMLHttpRequest();
+    xhc.open('GET',url,true);
+    xhc.send();
+    xhc.onreadystatechange=function(){
+      if(xhc.readyState===4){  
+          if(xhc.status=== 200){ 
+
+            let datos = JSON.parse(this.responseText);
+            for(let objeto of datos){
+
+              if(text == objeto.nombre){
+                return objeto.id;
+              }
+
+            } 
+          }
+      }else{
+        return xhc.status;
+      }
+  };
+
   })
 }
 
 function buscar(e){
-  return new Promise(function borrar(){
+  return new Promise(function buscar(){
     let xhc=new XMLHttpRequest();
     xhc.open('GET',url,true);
     xhc.send();
@@ -171,8 +222,6 @@ function buscar(e){
           if(xhc.status=== 200){ 
 
               let nombreTarget=e.target.parentNode.querySelector("span");
-              let tipoboton=e.target.elementName;
-              console.log(tipoboton);
               let datos = JSON.parse(this.responseText);
               datos.forEach(element => {
 
@@ -185,7 +234,7 @@ function buscar(e){
                     borrarJSON(element.id);
 
                   }
-                  if(element.nombre == nombreTarget && boton == "edit"){
+                  if(boton == "save"){
 
                     actualizar(element.id);
 
@@ -210,17 +259,36 @@ function borrarJSON(id){
   })
 }
 
-function actualizar(id){  
-  return new Promise(function() {
-    let xhr=new XMLHttpRequest();
-    xhr.open('PATCH',"http://localhost:3000/invitados/"+id,true);
-    xhr.setRequestHeader("Content-Type", "application/json");
-    xhr.send();
+function actualizar(id, confirmado, nombre) {
+  fetch(`http://localhost:3000/invitados/` + id, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      nombre: nombre,
+      confirmado: confirmado
+    })
   })
+  .then(response => {
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+    return response.json();
+  })
+  .then(data => {
+    console.log(data);
+  })
+  .catch(error => {
+    console.error('There was a problem with the fetch operation:', error);
+  });
+}
+
+
 
 }
 
-});  
+);  
 
 
 
