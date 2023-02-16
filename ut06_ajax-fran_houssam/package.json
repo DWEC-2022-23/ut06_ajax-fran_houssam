@@ -1,0 +1,20 @@
+{
+  "name": "bodas",
+  "version": "1.0.0",
+  "description": "app bodas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Carlos Tessier",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.1",
+    "json-server": "^0.17.1",
+    "node-fetch": "^3.3.0"
+  },
+  "devDependencies": {
+    "chai": "^4.3.7",
+    "xv": "^2.1.1"
+  }
+}
